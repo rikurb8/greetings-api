@@ -48,10 +48,13 @@ func HandlePostMeasurement(w http.ResponseWriter, r *http.Request) {
 	id, _ := result.LastInsertId()
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err = json.NewEncoder(w).Encode(map[string]interface{}{
 		"id": id,
 		"message": "Measurement recorded successfully",
 	})
+	if err != nil {
+		fmt.Printf("Error encoding response: %v\n", err)
+	}
 }
 
 func HandleGetLatestMeasurements(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +65,11 @@ func HandleGetLatestMeasurements(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to retrieve measurements", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Printf("Error closing rows: %v\n", err)
+		}
+	}()
 
 	var measurements []Measurement
 	for rows.Next() {
@@ -75,7 +82,10 @@ func HandleGetLatestMeasurements(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(measurements)
+	err = json.NewEncoder(w).Encode(measurements)
+	if err != nil {
+		fmt.Printf("Error encoding measurements: %v\n", err)
+	}
 }
 
 func HandleGetAverageMeasurements(w http.ResponseWriter, r *http.Request) {
@@ -102,5 +112,8 @@ func HandleGetAverageMeasurements(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(avg)
+	err = json.NewEncoder(w).Encode(avg)
+	if err != nil {
+		fmt.Printf("Error encoding averages: %v\n", err)
+	}
 }
