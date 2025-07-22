@@ -13,15 +13,14 @@ import (
 )
 
 func setupTestDB(t *testing.T) func() {
-	// Create a temporary test database
-	tempDB := "./test_greetings.db"
+	// Create a unique test database for each test
+	tempDB := fmt.Sprintf("./test_%s_%d.db", t.Name(), time.Now().UnixNano())
 	
-	// Remove any existing test database
-	os.Remove(tempDB)
-	
-	// Override the database file for testing
+	// Save original db
 	originalDB := db
-	err := InitDatabase()
+	
+	// Initialize new test database
+	err := InitTestDatabase(tempDB)
 	if err != nil {
 		t.Fatalf("Failed to initialize test database: %v", err)
 	}
@@ -34,6 +33,30 @@ func setupTestDB(t *testing.T) func() {
 		db = originalDB
 		os.Remove(tempDB)
 	}
+}
+
+func InitTestDatabase(dbPath string) error {
+	var err error
+	db, err = sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("error opening database: %w", err)
+	}
+
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS measurements (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+		temperature REAL,
+		humidity REAL,
+		moisture REAL
+	);`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return fmt.Errorf("error creating measurements table: %w", err)
+	}
+
+	return nil
 }
 
 func TestHandlePostMeasurement(t *testing.T) {
@@ -102,7 +125,7 @@ func TestHandleGetAverageMeasurements(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
 
-	// Insert test measurements
+	// Insert test measurements with same values
 	for i := 0; i < 5; i++ {
 		_, err := db.Exec(
 			"INSERT INTO measurements (temperature, humidity, moisture) VALUES (?, ?, ?)",
