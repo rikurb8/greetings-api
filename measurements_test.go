@@ -30,10 +30,14 @@ func setupTestDB(t *testing.T) func() {
 	// Return cleanup function
 	return func() {
 		if db != nil {
-			db.Close()
+			if err := db.Close(); err != nil {
+				t.Logf("Error closing database: %v", err)
+			}
 		}
 		db = originalDB
-		os.Remove(tempDB)
+		if err := os.Remove(tempDB); err != nil {
+			t.Logf("Error removing test database: %v", err)
+		}
 	}
 }
 
