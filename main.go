@@ -22,8 +22,15 @@ type Greeting struct {
 }
 
 func main() {
+	// Initialize database
+	err := InitDatabase()
+	if err != nil {
+		fmt.Printf("error initializing database: %s\n", err)
+		os.Exit(1)
+	}
+
 	var greetings []*Greeting
-	err := json.Unmarshal(greetingsJson, &greetings)
+	err = json.Unmarshal(greetingsJson, &greetings)
 	if err != nil {
 		fmt.Printf("error loading greetings: %s\n", err)
 		os.Exit(1)
@@ -57,12 +64,19 @@ func main() {
 		}
 	}).Methods("GET")
 
+	// Measurement endpoints
+	router.HandleFunc("/measurements", HandlePostMeasurement).Methods("POST")
+	router.HandleFunc("/measurements/latest", HandleGetLatestMeasurements).Methods("GET")
+	router.HandleFunc("/measurements/average", HandleGetAverageMeasurements).Methods("GET")
+
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
 			"http://greetings.kylepenfound.com",
 			"https://dagger-demo.netlify.app",
 			"http://localhost:8081",
 		},
+		AllowedMethods: []string{"GET", "POST"},
+		AllowedHeaders: []string{"Content-Type"},
 	})
 	handler := c.Handler(router)
 	err = http.ListenAndServe(":8080", handler)
