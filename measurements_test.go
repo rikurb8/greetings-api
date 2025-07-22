@@ -97,11 +97,10 @@ func TestHandleGetLatestMeasurements(t *testing.T) {
 	// Insert test measurements
 	for i := 0; i < 10; i++ {
 		_, err := db.Exec(
-			"INSERT INTO measurements (temperature, humidity, moisture) VALUES (?, ?, ?)",
-			20.0+float64(i), 60.0+float64(i), 40.0+float64(i),
+			"INSERT INTO measurements (temperature, humidity, moisture, timestamp) VALUES (?, ?, ?, datetime('now', '+' || ? || ' seconds'))",
+			20.0+float64(i), 60.0+float64(i), 40.0+float64(i), i,
 		)
 		assert.NilError(t, err)
-		time.Sleep(10 * time.Millisecond) // Ensure different timestamps
 	}
 
 	req, err := http.NewRequest("GET", "/measurements/latest", nil)
@@ -118,9 +117,11 @@ func TestHandleGetLatestMeasurements(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, 5, len(measurements))
 
-	// Verify that measurements are in descending order
+	// Verify that measurements are in descending order (latest first)
+	// The latest measurement should have temperature 29.0 (20.0 + 9)
 	assert.Equal(t, 29.0, measurements[0].Temperature)
 	assert.Equal(t, 28.0, measurements[1].Temperature)
+	assert.Equal(t, 27.0, measurements[2].Temperature)
 }
 
 func TestHandleGetAverageMeasurements(t *testing.T) {
